@@ -1,0 +1,43 @@
+{
+  ".source.elm-markup": {
+    "image": {
+      "prefix": "| Image",
+      "body": "| Image\n    src = ${1:src}\n    description = ${2:description}",
+      "description": "embed an image"
+    },
+    "list": {
+      "prefix": "| List",
+      "body": [
+        "| List",
+        "    - ${1:first}"
+      ],
+      "description": "A list.  - for bullets, -> for arrows, 1. for numbers"
+    },
+    "title": {
+      "prefix": "| Title",
+      "body": [
+        "| Title",
+        "    ${1:Your title}"
+      ],
+      "description": "The title of your document."
+    },
+    "header": {
+      "prefix": "| Header",
+      "body": [
+        "| Header",
+        "    ${1:Your header}"
+      ],
+      "description": "A header."
+    },
+    "code": {
+      "prefix": "{ Code",
+      "body": "{Code|${1:src}}",
+      "description": "a code inline block."
+    },
+    "link": {
+      "prefix": "{ Link",
+      "body": "{Link|${1:description}|url=${2:url}}",
+      "description": "An inline code link."
+    }
+  }
+}

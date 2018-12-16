@@ -1,0 +1,157 @@
+{
+  "fileTypes": [
+    "elm-markup"
+  ],
+  "name": "Elm Markup",
+  "scopeName": "source.elm-markup",
+  "patterns": [
+    {
+      "include": "#inline"
+    },
+    {
+      "include": "#italic"
+    },
+    {
+      "include": "#bold"
+    },
+    {
+      "include": "#nobreak"
+    },
+    {
+      "include": "#list-icon"
+    },
+    {
+      "include": "#dashes"
+    },
+    {
+      "include": "#arrow"
+    },
+    {
+      "include": "#block"
+    }
+  ],
+  "repository": {
+    "inline": {
+      "name": "meta.inline.custom",
+      "begin": "({)([^|^}]+)",
+      "beginCaptures": {
+        "1": {
+          "name": "entity.name.inline.elm"
+        },
+        "2": {
+          "name": "entity.name.inline.elm"
+        }
+      },
+      "end": "(})",
+      "endCaptures": {
+        "0": {
+          "name": "entity.name.inline.elm"
+        }
+      },
+      "patterns": [
+        {
+          "match": "([^=^|^}]+)(=)([^|^\\}]+)",
+          "name": "meta.inline.key-value",
+          "captures": {
+            "1": {
+              "name": "comment.block.elm-markup"
+            },
+            "2": {
+              "name": "keyword.control.elm"
+            },
+            "3": {
+              "name": "comment.block.elm-markup"
+            }
+          }
+        },
+        {
+          "match": "[^|^\\}]+",
+          "name": "other.content.elm-markup"
+        },
+        {
+          "match": "\\|",
+          "name": "entity.name.inline.elm"
+        }
+      ]
+    },
+    "arrow": {
+      "match": "(\\->)",
+      "name": "constant.other.type-constructor.elm",
+      "captures": {
+        "1": {
+          "name": "keyword.control.elm"
+        }
+      }
+    },
+    "list-icon": {
+      "match": "^\\s+(-+)([a-z0-9]*)([^a-zA-Z0-9 \\t]*)",
+      "name": "constant.other.item-number.elm",
+      "captures": {
+        "1": {
+          "name": "keyword.control.elm"
+        },
+        "2": {
+          "name": "entity.name.block.elm"
+        },
+        "3": {
+          "name": "keyword.control.elm"
+        }
+      }
+    },
+    "dashes": {
+      "match": "(-+)",
+      "name": "constant.other.dashes.elm",
+      "captures": {
+        "1": {
+          "name": "keyword.control.elm"
+        }
+      }
+    },
+    "block": {
+      "match": "^\\s*(\\|)\\s+(.*)",
+      "name": "constant.other.type-constructor.elm",
+      "captures": {
+        "1": {
+          "name": "keyword.control.elm"
+        },
+        "2": {
+          "name": "constant.other.block.elm"
+        }
+      }
+    },
+    "italic": {
+      "match": "(\\/)([^/]*)(\\/)",
+      "name": "meta.inline.italic.custom",
+      "captures": {
+        "1": {
+          "name": "string.italic.elm-markup"
+        },
+        "2": {
+          "name": "string.italic.elm-markup"
+        },
+        "3": {
+          "name": "string.italic.elm-markup"
+        }
+      }
+    },
+    "nobreak": {
+      "match": "\\<\\>",
+      "name": "keyword.control.elm"
+    },
+    "bold": {
+      "match": "(\\*)([^\\*]+)(\\*)",
+      "name": "meta.inline.bold",
+      "captures": {
+        "1": {
+          "name": "other.content.bold.elm-markup"
+        },
+        "2": {
+          "name": "other.content.bold.elm-markup"
+        },
+        "3": {
+          "name": "other.content.bold.elm-markup"
+        }
+      }
+    }
+  }
+}

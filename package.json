@@ -1,0 +1,78 @@
+{
+    "name": "elm-markup",
+    "description": "Elm Markup Language support for VS Code",
+    "version": "0.0.1",
+    "publisher": "mgriffith",
+    "author": {
+        "name": "Matthew Griffith"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mdgriffith/elm-markup-vscode.git"
+    },
+    "bugs": {
+        "url": "https://github.com/mdgriffith/elm-markup-vscode/issues"
+    },
+    "engines": {
+        "vscode": "^1.25.0"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "onCommand:emu.liveErrorView",
+        "onWebviewPanel:catCoding"
+    ],
+    "main": "./out/extension",
+    "contributes": {
+        "languages": [
+            {
+                "id": "elm-markup",
+                "aliases": [
+                    "Elm Markup",
+                    "emu",
+                    "elm-markup"
+                ],
+                "extensions": [
+                    ".emu"
+                ],
+                "configuration": "./elm-markup.configuration.json"
+            }
+        ],
+        "commands": [
+            {
+                "command": "emu.liveErrorView",
+                "title": "Start Elm Markup Live Errors",
+                "category": "Elm Markup"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "elm-markup",
+                "scopeName": "source.elm-markup",
+                "path": "./syntaxes/elm-markup.json"
+            }
+        ],
+        "snippets": [
+            {
+                "language": "elm-markup",
+                "scopeName": "source.elm-markup",
+                "path": "./snippets/elm-markup.json"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "tsc -p ./",
+        "compile": "tsc -p ./",
+        "watch": "tsc -w -p ./",
+        "postinstall": "node ./node_modules/vscode/bin/install"
+    },
+    "dependencies": {
+        "vscode": "^1.1.18"
+    },
+    "devDependencies": {
+        "@types/node": "^10.5.2",
+        "tslint": "^5.11.0",
+        "typescript": "^2.9.2"
+    }
+}

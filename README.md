@@ -1,2 +1,3 @@
 # elm-markup-vscode
-Syntax Highlighting for .up files for `elm-markup`
+
+Syntax Highlighting for .emu files for `elm-markup`
