@@ -1,124 +1,13 @@
 port module Main exposing (main)
 
 import Browser
+import Element
+import Element.Font as Font
 import Html
-import Json.Decode
+import Html.Attributes
+import Json.Decode as Decode
 import Json.Encode
-
-
-editorMessageDecoder =
-    Json.Decode.field "command" Json.Decode.string
-        |> Json.Decode.andThen
-            (\command ->
-                if command == "ActiveTextEditor" then
-                    Json.Decode.map SelectedFilename
-                        (Json.Decode.field "fileName" Json.Decode.string)
-
-                else if command == "ViewRange" then
-                    Json.Decode.map2
-                        (\fileName ranges ->
-                            ViewedRanges
-                                { fileName = fileName
-                                , ranges = ranges
-                                }
-                        )
-                        (Json.Decode.field "fileName" Json.Decode.string)
-                        (Json.Decode.field "ranges" (Json.Decode.list range))
-
-                else if command == "EditorSelection" then
-                    Json.Decode.map2
-                        (\fileName selections ->
-                            CurrentSelections
-                                { fileName = fileName
-                                , selections = selections
-                                }
-                        )
-                        (Json.Decode.field "fileName" Json.Decode.string)
-                        (Json.Decode.field "selections" (Json.Decode.list selection))
-
-                else if command == "RefreshEditor" then
-                    Json.Decode.map3
-                        (\fileName selections ranges ->
-                            Refresh
-                                { fileName = fileName
-                                , selections = selections
-                                , ranges = ranges
-                                }
-                        )
-                        (Json.Decode.field "fileName" Json.Decode.string)
-                        (Json.Decode.field "selections" (Json.Decode.list selection))
-                        (Json.Decode.field "ranges" (Json.Decode.list range))
-
-                else
-                    Json.Decode.succeed NoOp
-             -- { command: "ActiveTextEditor", fileName: editor.document.fileName }
-            )
-
-
-selection =
-    Json.Decode.map2 Selection
-        (Json.Decode.field "anchor" position)
-        (Json.Decode.field "active" position)
-
-
-range =
-    Json.Decode.map2 Range
-        (Json.Decode.field "start" position)
-        (Json.Decode.field "end" position)
-
-
-type alias Position =
-    { row : Int
-    , col : Int
-    }
-
-
-position =
-    Json.Decode.map2 Position
-        (Json.Decode.field "line" Json.Decode.int)
-        (Json.Decode.field "character" Json.Decode.int)
-
-
-type alias Model =
-    { viewing :
-        Maybe
-            { file : String
-            , visible : List Range
-            , selections : List Selection
-            }
-    }
-
-
-type alias Range =
-    { start : Position
-    , end : Position
-    }
-
-
-type alias Selection =
-    { anchor : Position
-    , active : Position
-    }
-
-
-type Msg
-    = NoOp
-    | EditorChange Json.Encode.Value
-    | SelectedFilename String
-    | ViewedRanges
-        { fileName : String
-        , ranges : List Range
-        }
-    | CurrentSelections
-        { fileName : String
-        , selections : List Selection
-        }
-    | Refresh
-        { fileName : String
-        , ranges : List Range
-        , selections : List Selection
-        }
-    | Notify
+import Model exposing (..)
 
 
 main : Program () Model Msg
@@ -136,23 +25,28 @@ main =
 
 
 init =
-    ( { viewing = Nothing }, Cmd.none )
+    ( { viewing = Nothing
+      , diagnostics = []
+      }
+    , Cmd.none
+    )
 
 
+update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case Debug.log "Message" msg of
         NoOp ->
             ( model, Cmd.none )
 
         EditorChange jsonString ->
-            case Json.Decode.decodeValue editorMessageDecoder jsonString of
+            case Decode.decodeValue editorMessageDecoder jsonString of
                 Ok newMessage ->
                     update newMessage model
 
-                Err error ->
+                Err exactError ->
                     let
                         _ =
-                            Debug.log "json" error
+                            Debug.log "json" exactError
                     in
                     ( model, Cmd.none )
 
@@ -237,30 +131,132 @@ update msg model =
             , Cmd.none
             )
 
+        RefreshDiagnostics diags ->
+            ( { model | diagnostics = diags }
+            , Cmd.none
+              -- , highlightWords model.viewing diags
+            )
+
         Notify ->
             ( model, notify (Json.Encode.string "hi") )
+
+
+styleSheet =
+    """
+body {
+    background-color: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
+    font-family: "Fira Code" !important;
+    font-weight: var(--vscode-editor-font-weight);
+    font-size: var(--vscode-editor-font-size);
+    margin: 0;
+    padding: 0 20px;
+}
+"""
 
 
 view model =
     { title = "Elm Markup Live View"
     , body =
-        [ case model.viewing of
-            Nothing ->
-                Html.text "No file detected."
-
-            Just selected ->
-                Html.div []
-                    [ Html.div []
-                        [ Html.text
-                            ("file: " ++ viewFileName selected.file)
-                        ]
-                    , Html.div []
-                        (List.map viewSelection selected.selections)
-                    , Html.div []
-                        (List.map viewRange selected.visible)
-                    ]
+        [ Html.node "style" [] [ Html.text styleSheet ]
+        , Html.div []
+            (List.map viewError model.diagnostics)
         ]
     }
+
+
+viewEditorFocus viewing =
+    case viewing of
+        Nothing ->
+            Html.text "No file detected."
+
+        Just selected ->
+            Html.div []
+                [ Html.div []
+                    [ Html.text
+                        ("file: " ++ viewFileName selected.file)
+                    ]
+                , Html.div []
+                    (List.map viewSelection selected.selections)
+                , Html.div []
+                    (List.map viewRange selected.visible)
+                ]
+
+
+viewError current =
+    let
+        shortMarkupName =
+            current.markupFile
+                |> String.split "/"
+                |> List.reverse
+                |> List.head
+                |> Maybe.withDefault "Unknown"
+    in
+    Html.div []
+        [ Html.div []
+            [ Html.div [ Html.Attributes.style "color" "yellow" ]
+                [ Html.text shortMarkupName
+                , Html.span [] [ Html.text " parsed with ", Html.text current.parserName ]
+                ]
+            ]
+        , case current.errors of
+            [] ->
+                Html.div
+                    [ Html.Attributes.style "white-space" "pre"
+                    ]
+                    [ Html.span
+                        [ Html.Attributes.style "color" "green"
+                        ]
+                        [ Html.text "  ✓" ]
+                    , Html.text " Successfully parsed!"
+                    ]
+
+            errors ->
+                Html.div []
+                    (List.map viewIssue errors)
+        ]
+
+
+viewIssue iss =
+    Html.div [ Html.Attributes.style "white-space" "pre" ]
+        [ Html.div [ Html.Attributes.style "color" "cyan" ]
+            [ Html.text (fillToEighty ("-- " ++ String.toUpper iss.name ++ " ")) ]
+        , Html.div []
+            [ Html.text "row"
+            , Html.text (String.fromInt iss.focus.start.col)
+            ]
+        , Html.div []
+            (List.map viewText iss.text)
+        ]
+
+
+fillToEighty str =
+    let
+        fill =
+            String.repeat (80 - String.length str) "-"
+    in
+    str ++ fill
+
+
+viewText txt =
+    case txt.color of
+        Nothing ->
+            Html.text txt.text
+
+        Just clr ->
+            Html.span [ colorAttribute clr ] [ Html.text txt.text ]
+
+
+colorAttribute clr =
+    case clr of
+        Yellow ->
+            Html.Attributes.style "color" "yellow"
+
+        Red ->
+            Html.Attributes.style "color" "red"
+
+        Cyan ->
+            Html.Attributes.style "color" "cyan"
 
 
 viewRange sel =
@@ -296,22 +292,83 @@ viewPos { row, col } =
         ]
 
 
-
---     type alias Range =
---     { start : Position
---     , end : Position
---     }
--- type alias Selection =
---     { anchor : Position
---     , active : Position
---     }
-
-
 viewFileName name =
     String.split "/" name
         |> List.reverse
         |> List.head
         |> Maybe.withDefault "Empty File"
+
+
+type Notification
+    = HighlightWord
+        { row : Int
+        , start : Int
+        , end : Int
+        }
+    | HighlightSection
+        { startRow : Int
+        , endRow : Int
+        }
+
+
+highlightWords viewing errors =
+    notify <|
+        Json.Encode.object
+            [ ( "command", Json.Encode.string "highlight" )
+            , ( "selections", Json.Encode.list encodeError errors )
+            ]
+
+
+encodeError error =
+    Json.Encode.object
+        [ ( "markupFile", Json.Encode.string error.markupFile )
+        , ( "parserName", Json.Encode.string error.parserName )
+        , ( "errors", Json.Encode.list encodeIssue error.errors )
+        ]
+
+
+encodeIssue issue =
+    Json.Encode.object
+        [ ( "focus", encodeFocus issue )
+        , ( "name", Json.Encode.string issue.name )
+        , ( "text", Json.Encode.list encodeText issue.text )
+        ]
+
+
+encodeText txt =
+    Json.Encode.object
+        [ ( "color", encodeColor txt.color )
+        , ( "text", Json.Encode.string txt.text )
+        ]
+
+
+encodeColor clr =
+    case clr of
+        Nothing ->
+            Json.Encode.string ""
+
+        Just Red ->
+            Json.Encode.string "red"
+
+        Just Cyan ->
+            Json.Encode.string "cyan"
+
+        Just Yellow ->
+            Json.Encode.string "yellow"
+
+
+encodeFocus issue =
+    Json.Encode.object
+        [ ( "start", encodePos issue.focus.start )
+        , ( "end", encodePos issue.focus.end )
+        ]
+
+
+encodePos pos =
+    Json.Encode.object
+        [ ( "row", Json.Encode.int pos.row )
+        , ( "col", Json.Encode.int pos.col )
+        ]
 
 
 port editorChange : (Json.Encode.Value -> msg) -> Sub msg
