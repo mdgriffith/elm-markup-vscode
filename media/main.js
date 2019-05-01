@@ -2314,6 +2314,43 @@ function _Platform_mergeExportsDebug(moduleName, obj, exports)
 
 
 
+var _Bitwise_and = F2(function(a, b)
+{
+	return a & b;
+});
+
+var _Bitwise_or = F2(function(a, b)
+{
+	return a | b;
+});
+
+var _Bitwise_xor = F2(function(a, b)
+{
+	return a ^ b;
+});
+
+function _Bitwise_complement(a)
+{
+	return ~a;
+};
+
+var _Bitwise_shiftLeftBy = F2(function(offset, a)
+{
+	return a << offset;
+});
+
+var _Bitwise_shiftRightBy = F2(function(offset, a)
+{
+	return a >> offset;
+});
+
+var _Bitwise_shiftRightZfBy = F2(function(offset, a)
+{
+	return a >>> offset;
+});
+
+
+
 
 // HELPERS
 
@@ -4310,9 +4347,6 @@ function _Browser_load(url)
 		}
 	}));
 }
-var author$project$Main$EditorChange = function (a) {
-	return {$: 'EditorChange', a: a};
-};
 var elm$core$Array$branchFactor = 32;
 var elm$core$Array$Array_elm_builtin = F4(
 	function (a, b, c, d) {
@@ -4793,107 +4827,185 @@ var author$project$Main$editorChange = _Platform_incomingPort('editorChange', el
 var elm$core$Platform$Cmd$batch = _Platform_batch;
 var elm$core$Platform$Cmd$none = elm$core$Platform$Cmd$batch(_List_Nil);
 var author$project$Main$init = _Utils_Tuple2(
-	{viewing: elm$core$Maybe$Nothing},
+	{diagnostics: _List_Nil, viewing: elm$core$Maybe$Nothing},
 	elm$core$Platform$Cmd$none);
-var author$project$Main$CurrentSelections = function (a) {
+var elm$core$Basics$identity = function (x) {
+	return x;
+};
+var author$project$Main$notify = _Platform_outgoingPort('notify', elm$core$Basics$identity);
+var author$project$Model$CurrentSelections = function (a) {
 	return {$: 'CurrentSelections', a: a};
 };
-var author$project$Main$NoOp = {$: 'NoOp'};
-var author$project$Main$Refresh = function (a) {
+var author$project$Model$NoOp = {$: 'NoOp'};
+var author$project$Model$Refresh = function (a) {
 	return {$: 'Refresh', a: a};
 };
-var author$project$Main$SelectedFilename = function (a) {
+var author$project$Model$RefreshDiagnostics = function (a) {
+	return {$: 'RefreshDiagnostics', a: a};
+};
+var author$project$Model$SelectedFilename = function (a) {
 	return {$: 'SelectedFilename', a: a};
 };
-var author$project$Main$ViewedRanges = function (a) {
+var author$project$Model$ViewedRanges = function (a) {
 	return {$: 'ViewedRanges', a: a};
 };
-var author$project$Main$Range = F2(
+var author$project$Model$Error = F3(
+	function (markupFile, parserName, errors) {
+		return {errors: errors, markupFile: markupFile, parserName: parserName};
+	});
+var author$project$Model$Issue = F3(
+	function (name, focus, text) {
+		return {focus: focus, name: name, text: text};
+	});
+var author$project$Model$Range = F2(
 	function (start, end) {
 		return {end: end, start: start};
 	});
-var author$project$Main$Position = F2(
+var author$project$Model$Position = F2(
 	function (row, col) {
 		return {col: col, row: row};
 	});
 var elm$json$Json$Decode$field = _Json_decodeField;
 var elm$json$Json$Decode$int = _Json_decodeInt;
 var elm$json$Json$Decode$map2 = _Json_map2;
-var author$project$Main$position = A3(
+var author$project$Model$rowColPos = A3(
 	elm$json$Json$Decode$map2,
-	author$project$Main$Position,
+	author$project$Model$Position,
+	A2(elm$json$Json$Decode$field, 'row', elm$json$Json$Decode$int),
+	A2(elm$json$Json$Decode$field, 'col', elm$json$Json$Decode$int));
+var author$project$Model$focus = A3(
+	elm$json$Json$Decode$map2,
+	author$project$Model$Range,
+	A2(elm$json$Json$Decode$field, 'start', author$project$Model$rowColPos),
+	A2(elm$json$Json$Decode$field, 'end', author$project$Model$rowColPos));
+var author$project$Model$Text = F2(
+	function (color, text) {
+		return {color: color, text: text};
+	});
+var author$project$Model$Cyan = {$: 'Cyan'};
+var author$project$Model$Red = {$: 'Red'};
+var author$project$Model$Yellow = {$: 'Yellow'};
+var elm$json$Json$Decode$andThen = _Json_andThen;
+var elm$json$Json$Decode$fail = _Json_fail;
+var elm$json$Json$Decode$string = _Json_decodeString;
+var elm$json$Json$Decode$succeed = _Json_succeed;
+var author$project$Model$maybeColor = A2(
+	elm$json$Json$Decode$andThen,
+	function (val) {
+		switch (val) {
+			case 'yellow':
+				return elm$json$Json$Decode$succeed(
+					elm$core$Maybe$Just(author$project$Model$Yellow));
+			case 'red':
+				return elm$json$Json$Decode$succeed(
+					elm$core$Maybe$Just(author$project$Model$Red));
+			case 'cyan':
+				return elm$json$Json$Decode$succeed(
+					elm$core$Maybe$Just(author$project$Model$Cyan));
+			case '':
+				return elm$json$Json$Decode$succeed(elm$core$Maybe$Nothing);
+			default:
+				return elm$json$Json$Decode$fail('Unknown Color: ' + val);
+		}
+	},
+	elm$json$Json$Decode$string);
+var author$project$Model$text = A3(
+	elm$json$Json$Decode$map2,
+	author$project$Model$Text,
+	A2(elm$json$Json$Decode$field, 'color', author$project$Model$maybeColor),
+	A2(elm$json$Json$Decode$field, 'text', elm$json$Json$Decode$string));
+var elm$json$Json$Decode$list = _Json_decodeList;
+var elm$json$Json$Decode$map3 = _Json_map3;
+var author$project$Model$issue = A4(
+	elm$json$Json$Decode$map3,
+	author$project$Model$Issue,
+	A2(elm$json$Json$Decode$field, 'name', elm$json$Json$Decode$string),
+	A2(elm$json$Json$Decode$field, 'focus', author$project$Model$focus),
+	A2(
+		elm$json$Json$Decode$field,
+		'text',
+		elm$json$Json$Decode$list(author$project$Model$text)));
+var author$project$Model$error = A4(
+	elm$json$Json$Decode$map3,
+	author$project$Model$Error,
+	A2(elm$json$Json$Decode$field, 'markupFile', elm$json$Json$Decode$string),
+	A2(elm$json$Json$Decode$field, 'parserName', elm$json$Json$Decode$string),
+	A2(
+		elm$json$Json$Decode$field,
+		'errors',
+		elm$json$Json$Decode$list(author$project$Model$issue)));
+var author$project$Model$position = A3(
+	elm$json$Json$Decode$map2,
+	author$project$Model$Position,
 	A2(elm$json$Json$Decode$field, 'line', elm$json$Json$Decode$int),
 	A2(elm$json$Json$Decode$field, 'character', elm$json$Json$Decode$int));
-var author$project$Main$range = A3(
+var author$project$Model$range = A3(
 	elm$json$Json$Decode$map2,
-	author$project$Main$Range,
-	A2(elm$json$Json$Decode$field, 'start', author$project$Main$position),
-	A2(elm$json$Json$Decode$field, 'end', author$project$Main$position));
-var author$project$Main$Selection = F2(
+	author$project$Model$Range,
+	A2(elm$json$Json$Decode$field, 'start', author$project$Model$position),
+	A2(elm$json$Json$Decode$field, 'end', author$project$Model$position));
+var author$project$Model$Selection = F2(
 	function (anchor, active) {
 		return {active: active, anchor: anchor};
 	});
-var author$project$Main$selection = A3(
+var author$project$Model$selection = A3(
 	elm$json$Json$Decode$map2,
-	author$project$Main$Selection,
-	A2(elm$json$Json$Decode$field, 'anchor', author$project$Main$position),
-	A2(elm$json$Json$Decode$field, 'active', author$project$Main$position));
-var elm$json$Json$Decode$andThen = _Json_andThen;
-var elm$json$Json$Decode$list = _Json_decodeList;
+	author$project$Model$Selection,
+	A2(elm$json$Json$Decode$field, 'anchor', author$project$Model$position),
+	A2(elm$json$Json$Decode$field, 'active', author$project$Model$position));
 var elm$json$Json$Decode$map = _Json_map1;
-var elm$json$Json$Decode$map3 = _Json_map3;
-var elm$json$Json$Decode$string = _Json_decodeString;
-var elm$json$Json$Decode$succeed = _Json_succeed;
-var author$project$Main$editorMessageDecoder = A2(
+var author$project$Model$editorMessageDecoder = A2(
 	elm$json$Json$Decode$andThen,
 	function (command) {
 		return (command === 'ActiveTextEditor') ? A2(
 			elm$json$Json$Decode$map,
-			author$project$Main$SelectedFilename,
+			author$project$Model$SelectedFilename,
 			A2(elm$json$Json$Decode$field, 'fileName', elm$json$Json$Decode$string)) : ((command === 'ViewRange') ? A3(
 			elm$json$Json$Decode$map2,
 			F2(
 				function (fileName, ranges) {
-					return author$project$Main$ViewedRanges(
+					return author$project$Model$ViewedRanges(
 						{fileName: fileName, ranges: ranges});
 				}),
 			A2(elm$json$Json$Decode$field, 'fileName', elm$json$Json$Decode$string),
 			A2(
 				elm$json$Json$Decode$field,
 				'ranges',
-				elm$json$Json$Decode$list(author$project$Main$range))) : ((command === 'EditorSelection') ? A3(
+				elm$json$Json$Decode$list(author$project$Model$range))) : ((command === 'EditorSelection') ? A3(
 			elm$json$Json$Decode$map2,
 			F2(
 				function (fileName, selections) {
-					return author$project$Main$CurrentSelections(
+					return author$project$Model$CurrentSelections(
 						{fileName: fileName, selections: selections});
 				}),
 			A2(elm$json$Json$Decode$field, 'fileName', elm$json$Json$Decode$string),
 			A2(
 				elm$json$Json$Decode$field,
 				'selections',
-				elm$json$Json$Decode$list(author$project$Main$selection))) : ((command === 'RefreshEditor') ? A4(
+				elm$json$Json$Decode$list(author$project$Model$selection))) : ((command === 'RefreshEditor') ? A4(
 			elm$json$Json$Decode$map3,
 			F3(
 				function (fileName, selections, ranges) {
-					return author$project$Main$Refresh(
+					return author$project$Model$Refresh(
 						{fileName: fileName, ranges: ranges, selections: selections});
 				}),
 			A2(elm$json$Json$Decode$field, 'fileName', elm$json$Json$Decode$string),
 			A2(
 				elm$json$Json$Decode$field,
 				'selections',
-				elm$json$Json$Decode$list(author$project$Main$selection)),
+				elm$json$Json$Decode$list(author$project$Model$selection)),
 			A2(
 				elm$json$Json$Decode$field,
 				'ranges',
-				elm$json$Json$Decode$list(author$project$Main$range))) : elm$json$Json$Decode$succeed(author$project$Main$NoOp))));
+				elm$json$Json$Decode$list(author$project$Model$range))) : ((command === 'Show') ? A2(
+			elm$json$Json$Decode$map,
+			author$project$Model$RefreshDiagnostics,
+			A2(
+				elm$json$Json$Decode$field,
+				'json',
+				elm$json$Json$Decode$list(author$project$Model$error))) : elm$json$Json$Decode$succeed(author$project$Model$NoOp)))));
 	},
 	A2(elm$json$Json$Decode$field, 'command', elm$json$Json$Decode$string));
-var elm$core$Basics$identity = function (x) {
-	return x;
-};
-var author$project$Main$notify = _Platform_outgoingPort('notify', elm$core$Basics$identity);
 var elm$core$Debug$log = _Debug_log;
 var elm$json$Json$Decode$decodeValue = _Json_run;
 var elm$json$Json$Encode$string = _Json_wrap;
@@ -4907,7 +5019,7 @@ var author$project$Main$update = F2(
 					return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 				case 'EditorChange':
 					var jsonString = _n0.a;
-					var _n1 = A2(elm$json$Json$Decode$decodeValue, author$project$Main$editorMessageDecoder, jsonString);
+					var _n1 = A2(elm$json$Json$Decode$decodeValue, author$project$Model$editorMessageDecoder, jsonString);
 					if (_n1.$ === 'Ok') {
 						var newMessage = _n1.a;
 						var $temp$msg = newMessage,
@@ -4916,8 +5028,8 @@ var author$project$Main$update = F2(
 						model = $temp$model;
 						continue update;
 					} else {
-						var error = _n1.a;
-						var _n2 = A2(elm$core$Debug$log, 'json', error);
+						var exactError = _n1.a;
+						var _n2 = A2(elm$core$Debug$log, 'json', exactError);
 						return _Utils_Tuple2(model, elm$core$Platform$Cmd$none);
 					}
 				case 'SelectedFilename':
@@ -5000,6 +5112,13 @@ var author$project$Main$update = F2(
 							model,
 							{viewing: newViewing}),
 						elm$core$Platform$Cmd$none);
+				case 'RefreshDiagnostics':
+					var diags = _n0.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{diagnostics: diags}),
+						elm$core$Platform$Cmd$none);
 				default:
 					return _Utils_Tuple2(
 						model,
@@ -5008,31 +5127,28 @@ var author$project$Main$update = F2(
 			}
 		}
 	});
-var elm$core$List$head = function (list) {
-	if (list.b) {
-		var x = list.a;
-		var xs = list.b;
-		return elm$core$Maybe$Just(x);
-	} else {
-		return elm$core$Maybe$Nothing;
-	}
-};
-var elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
+var author$project$Main$styleSheet = '\nbody {\n    background-color: var(--vscode-editor-background);\n    color: var(--vscode-editor-foreground);\n    font-family: "Fira Code" !important;\n    font-weight: var(--vscode-editor-font-weight);\n    font-size: var(--vscode-editor-font-size);\n    margin: 0;\n    padding: 0 20px;\n}\n';
+var elm$core$String$length = _String_length;
+var elm$core$Bitwise$and = _Bitwise_and;
+var elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
+var elm$core$String$repeatHelp = F3(
+	function (n, chunk, result) {
+		return (n <= 0) ? result : A3(
+			elm$core$String$repeatHelp,
+			n >> 1,
+			_Utils_ap(chunk, chunk),
+			(!(n & 1)) ? result : _Utils_ap(result, chunk));
 	});
-var author$project$Main$viewFileName = function (name) {
-	return A2(
-		elm$core$Maybe$withDefault,
-		'Empty File',
-		elm$core$List$head(
-			elm$core$List$reverse(
-				A2(elm$core$String$split, '/', name))));
+var elm$core$String$repeat = F2(
+	function (n, chunk) {
+		return A3(elm$core$String$repeatHelp, n, chunk, '');
+	});
+var author$project$Main$fillToEighty = function (str) {
+	var fill = A2(
+		elm$core$String$repeat,
+		80 - elm$core$String$length(str),
+		'-');
+	return _Utils_ap(str, fill);
 };
 var elm$virtual_dom$VirtualDom$toHandlerInt = function (handler) {
 	switch (handler.$) {
@@ -5046,82 +5162,38 @@ var elm$virtual_dom$VirtualDom$toHandlerInt = function (handler) {
 			return 3;
 	}
 };
-var elm$html$Html$div = _VirtualDom_node('div');
+var elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var elm$html$Html$Attributes$style = elm$virtual_dom$VirtualDom$style;
+var author$project$Main$colorAttribute = function (clr) {
+	switch (clr.$) {
+		case 'Yellow':
+			return A2(elm$html$Html$Attributes$style, 'color', 'yellow');
+		case 'Red':
+			return A2(elm$html$Html$Attributes$style, 'color', 'red');
+		default:
+			return A2(elm$html$Html$Attributes$style, 'color', 'cyan');
+	}
+};
+var elm$html$Html$span = _VirtualDom_node('span');
 var elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var elm$html$Html$text = elm$virtual_dom$VirtualDom$text;
-var author$project$Main$viewPos = function (_n0) {
-	var row = _n0.row;
-	var col = _n0.col;
-	return A2(
-		elm$html$Html$div,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
-				elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						elm$html$Html$text(
-						'row: ' + elm$core$String$fromInt(row))
-					])),
-				A2(
-				elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						elm$html$Html$text(
-						'col: ' + elm$core$String$fromInt(col))
-					]))
-			]));
-};
-var author$project$Main$viewRange = function (sel) {
-	return A2(
-		elm$html$Html$div,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
-				elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						elm$html$Html$text('start'),
-						author$project$Main$viewPos(sel.start)
-					])),
-				A2(
-				elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						elm$html$Html$text('end'),
-						author$project$Main$viewPos(sel.end)
-					]))
-			]));
-};
-var author$project$Main$viewSelection = function (sel) {
-	return A2(
-		elm$html$Html$div,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
-				elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						elm$html$Html$text('anchor'),
-						author$project$Main$viewPos(sel.anchor)
-					])),
-				A2(
-				elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						elm$html$Html$text('active'),
-						author$project$Main$viewPos(sel.active)
-					]))
-			]));
+var author$project$Main$viewText = function (txt) {
+	var _n0 = txt.color;
+	if (_n0.$ === 'Nothing') {
+		return elm$html$Html$text(txt.text);
+	} else {
+		var clr = _n0.a;
+		return A2(
+			elm$html$Html$span,
+			_List_fromArray(
+				[
+					author$project$Main$colorAttribute(clr)
+				]),
+			_List_fromArray(
+				[
+					elm$html$Html$text(txt.text)
+				]));
+	}
 };
 var elm$core$List$foldrHelper = F4(
 	function (fn, acc, ctr, ls) {
@@ -5192,43 +5264,158 @@ var elm$core$List$map = F2(
 			_List_Nil,
 			xs);
 	});
+var elm$core$String$toUpper = _String_toUpper;
+var elm$html$Html$div = _VirtualDom_node('div');
+var author$project$Main$viewIssue = function (iss) {
+	return A2(
+		elm$html$Html$div,
+		_List_fromArray(
+			[
+				A2(elm$html$Html$Attributes$style, 'white-space', 'pre')
+			]),
+		_List_fromArray(
+			[
+				A2(
+				elm$html$Html$div,
+				_List_fromArray(
+					[
+						A2(elm$html$Html$Attributes$style, 'color', 'cyan')
+					]),
+				_List_fromArray(
+					[
+						elm$html$Html$text(
+						author$project$Main$fillToEighty(
+							'-- ' + (elm$core$String$toUpper(iss.name) + ' ')))
+					])),
+				A2(
+				elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						elm$html$Html$text('row'),
+						elm$html$Html$text(
+						elm$core$String$fromInt(iss.focus.start.col))
+					])),
+				A2(
+				elm$html$Html$div,
+				_List_Nil,
+				A2(elm$core$List$map, author$project$Main$viewText, iss.text))
+			]));
+};
+var elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return elm$core$Maybe$Just(x);
+	} else {
+		return elm$core$Maybe$Nothing;
+	}
+};
+var elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
+var author$project$Main$viewError = function (current) {
+	var shortMarkupName = A2(
+		elm$core$Maybe$withDefault,
+		'Unknown',
+		elm$core$List$head(
+			elm$core$List$reverse(
+				A2(elm$core$String$split, '/', current.markupFile))));
+	return A2(
+		elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						elm$html$Html$div,
+						_List_fromArray(
+							[
+								A2(elm$html$Html$Attributes$style, 'color', 'yellow')
+							]),
+						_List_fromArray(
+							[
+								elm$html$Html$text(shortMarkupName),
+								A2(
+								elm$html$Html$span,
+								_List_Nil,
+								_List_fromArray(
+									[
+										elm$html$Html$text(' parsed with '),
+										elm$html$Html$text(current.parserName)
+									]))
+							]))
+					])),
+				function () {
+				var _n0 = current.errors;
+				if (!_n0.b) {
+					return A2(
+						elm$html$Html$div,
+						_List_fromArray(
+							[
+								A2(elm$html$Html$Attributes$style, 'white-space', 'pre')
+							]),
+						_List_fromArray(
+							[
+								A2(
+								elm$html$Html$span,
+								_List_fromArray(
+									[
+										A2(elm$html$Html$Attributes$style, 'color', 'green')
+									]),
+								_List_fromArray(
+									[
+										elm$html$Html$text('  ✓')
+									])),
+								elm$html$Html$text(' Successfully parsed!')
+							]));
+				} else {
+					var errors = _n0;
+					return A2(
+						elm$html$Html$div,
+						_List_Nil,
+						A2(elm$core$List$map, author$project$Main$viewIssue, errors));
+				}
+			}()
+			]));
+};
+var elm$virtual_dom$VirtualDom$node = function (tag) {
+	return _VirtualDom_node(
+		_VirtualDom_noScript(tag));
+};
+var elm$html$Html$node = elm$virtual_dom$VirtualDom$node;
 var author$project$Main$view = function (model) {
 	return {
 		body: _List_fromArray(
 			[
-				function () {
-				var _n0 = model.viewing;
-				if (_n0.$ === 'Nothing') {
-					return elm$html$Html$text('No file detected.');
-				} else {
-					var selected = _n0.a;
-					return A2(
-						elm$html$Html$div,
-						_List_Nil,
-						_List_fromArray(
-							[
-								A2(
-								elm$html$Html$div,
-								_List_Nil,
-								_List_fromArray(
-									[
-										elm$html$Html$text(
-										'file: ' + author$project$Main$viewFileName(selected.file))
-									])),
-								A2(
-								elm$html$Html$div,
-								_List_Nil,
-								A2(elm$core$List$map, author$project$Main$viewSelection, selected.selections)),
-								A2(
-								elm$html$Html$div,
-								_List_Nil,
-								A2(elm$core$List$map, author$project$Main$viewRange, selected.visible))
-							]));
-				}
-			}()
+				A3(
+				elm$html$Html$node,
+				'style',
+				_List_Nil,
+				_List_fromArray(
+					[
+						elm$html$Html$text(author$project$Main$styleSheet)
+					])),
+				A2(
+				elm$html$Html$div,
+				_List_Nil,
+				A2(elm$core$List$map, author$project$Main$viewError, model.diagnostics))
 			]),
 		title: 'Elm Markup Live View'
 	};
+};
+var author$project$Model$EditorChange = function (a) {
+	return {$: 'EditorChange', a: a};
 };
 var elm$browser$Browser$External = function (a) {
 	return {$: 'External', a: a};
@@ -5327,7 +5514,6 @@ var elm$core$Task$perform = F2(
 			elm$core$Task$Perform(
 				A2(elm$core$Task$map, toMessage, task)));
 	});
-var elm$core$String$length = _String_length;
 var elm$core$String$slice = _String_slice;
 var elm$core$String$dropLeft = F2(
 	function (n, string) {
@@ -5467,7 +5653,7 @@ var author$project$Main$main = elm$browser$Browser$document(
 			return elm$core$Platform$Sub$batch(
 				_List_fromArray(
 					[
-						author$project$Main$editorChange(author$project$Main$EditorChange)
+						author$project$Main$editorChange(author$project$Model$EditorChange)
 					]));
 		},
 		update: author$project$Main$update,
