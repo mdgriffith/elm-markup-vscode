@@ -1,5 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import * as script from './script';
+import * as which from 'which';
 
 
 export function activate(context: vscode.ExtensionContext) {
@@ -43,8 +45,51 @@ function prepareRanges(ranges) {
     return prepared
 }
 
+function findRanges(errors) {
+    let prepared = [];
+
+    const rangeLength = errors.length;
+    for (var i = 0; i < rangeLength; i++) {
+        const errLen = errors[i].errors.length;
+        for (var j = 0; j < errLen; j++) {
+            let start = new vscode.Position(errors[i].errors[j].focus.start.row - 1, errors[i].errors[j].focus.start.col - 1);
+            let end = new vscode.Position(errors[i].errors[j].focus.end.row - 1, errors[i].errors[j].focus.end.col);
+
+            let newRange = new vscode.Range(start, end);
+            prepared.push(newRange);
+        }
+    }
+    return prepared
+}
+
+function toDiagnostics(errors) {
+    const rangeLength = errors.length;
+    for (var i = 0; i < rangeLength; i++) {
+
+        const uri = vscode.Uri.file(errors[i].markupFile);
+
+        let diagnostics = []
+        const errLen = errors[i].errors.length;
+        for (var j = 0; j < errLen; j++) {
+            let current = errors[i].errors[j];
+            let start = new vscode.Position(current.focus.start.row - 1, current.focus.start.col - 1);
+            let end = new vscode.Position(current.focus.end.row - 1, current.focus.end.col);
+
+            let newRange = new vscode.Range(start, end);
+            let message = current.name;
+            let diag = new vscode.Diagnostic(newRange, message, vscode.DiagnosticSeverity.Error)
+            diagnostics.push(diag);
+        }
+        collection.set(uri, diagnostics)
+    }
+    return true
+}
+
+
+const collection = vscode.languages.createDiagnosticCollection('elm-markup');
+
 /**
- * Manages cat coding webview panels
+ * Manages Elm Markup webview panels
  */
 class MarkupPanel {
     /**
@@ -52,7 +97,7 @@ class MarkupPanel {
      */
     public static currentPanel: MarkupPanel | undefined;
 
-    public static readonly viewType = 'catCoding';
+    public static readonly viewType = 'elmMarkup';
 
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionPath: string;
@@ -80,7 +125,7 @@ class MarkupPanel {
 
         vscode.window.onDidChangeActiveTextEditor(editor => {
             if (editor) {
-                MarkupPanel.currentPanel.doChangeEditor({
+                MarkupPanel.currentPanel.sendMessage({
                     command: "RefreshEditor",
                     fileName: editor.document.fileName,
                     ranges: prepareRanges(editor.visibleRanges),
@@ -92,7 +137,7 @@ class MarkupPanel {
         vscode.window.onDidChangeTextEditorVisibleRanges(visibleRanges => {
             if (visibleRanges) {
 
-                MarkupPanel.currentPanel.doChangeEditor({
+                MarkupPanel.currentPanel.sendMessage({
                     command: "ViewRange",
                     fileName: visibleRanges.textEditor.document.fileName,
                     ranges: prepareRanges(visibleRanges.visibleRanges)
@@ -102,9 +147,7 @@ class MarkupPanel {
 
         vscode.window.onDidChangeTextEditorSelection(editor => {
             if (editor) {
-
-
-                MarkupPanel.currentPanel.doChangeEditor({
+                MarkupPanel.currentPanel.sendMessage({
                     command: "EditorSelection",
                     fileName: editor.textEditor.document.fileName,
                     selections: editor.selections
@@ -112,16 +155,104 @@ class MarkupPanel {
             }
         });
 
+        const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.path;
+
+
+        let localMarkupFiles = new vscode.RelativePattern(workspaceRoot, "**/*.{emu,elm}")
+
+        //  watch files and update errors if they've changed on disk
+        let watcher = vscode.workspace.createFileSystemWatcher(localMarkupFiles, false, false, false)
+        watcher.onDidChange(event => {
+
+            if (!event.path.includes("elm-stuff")) {
+                console.log("File changed")
+                let elmMarkupExe = which.sync("elm-markup");
+
+                const folders = vscode.workspace.workspaceFolders;
+
+                if (folders.length > 0) {
+                    const projectRoot = folders[0].uri.path;
+
+                    script.executeExpectJson(elmMarkupExe, ["--report=json"], {
+                        cwd: projectRoot,
+                        env: process.env
+                    }).then(json => {
+                        MarkupPanel.currentPanel.sendMessage({
+                            command: "Show",
+                            json: json
+                        });
+                        MarkupPanel.currentPanel.highlight(json);
+                    }).catch(err => {
+                        console.error(err);
+                    })
+                }
+            }
+
+        });
+
+        // watcher.onDidCreate(ev => { console.log("created"); console.log(ev); });
+        // watcher.onDidDelete(ev => { console.log("deleted"); console.log(ev); });
+
+        // Alternatively, we could reparse on save. 
+        // Maybe this would be faster in some circumstances, but not in the basic case.
+        // vscode.workspace.onDidSaveTextDocument(event => {
+        //     console.log("File saved");
+        //     let elmMarkupExe = which.sync("elm-markup");
+
+        //     const folders = vscode.workspace.workspaceFolders;
+
+        //     if (folders.length > 0) {
+        //         const projectRoot = folders[0].uri.path;
+
+        //         script.executeExpectJson(elmMarkupExe, ["--report=json"], {
+        //             cwd: projectRoot,
+        //             env: process.env
+        //         }).then(json => {
+        //             MarkupPanel.currentPanel.sendMessage({
+        //                 command: "Show",
+        //                 json: json
+        //             });
+        //             MarkupPanel.currentPanel.highlight(json);
+        //         }).catch(err => {
+        //             console.error(err);
+        //         })
+        //     }
+        // });
+
+
         MarkupPanel.currentPanel = new MarkupPanel(panel, extensionPath);
 
         if (vscode.window.activeTextEditor) {
-            MarkupPanel.currentPanel.doChangeEditor({
+            MarkupPanel.currentPanel.sendMessage({
                 command: "RefreshEditor",
                 fileName: vscode.window.activeTextEditor.document.fileName,
                 ranges: prepareRanges(vscode.window.activeTextEditor.visibleRanges),
                 selections: vscode.window.activeTextEditor.selections,
             });
         }
+
+        let elmMarkupExe = which.sync("elm-markup");
+
+        const folders = vscode.workspace.workspaceFolders;
+
+
+        if (folders.length > 0) {
+            const projectRoot = folders[0].uri.path;
+
+            script.executeExpectJson(elmMarkupExe, ["--report=json"], {
+                cwd: projectRoot,
+                env: process.env
+            }).then(json => {
+                MarkupPanel.currentPanel.sendMessage({
+                    command: "Show",
+                    json: json
+                });
+                MarkupPanel.currentPanel.highlight(json);
+            }).catch(err => {
+                console.error(err);
+            })
+        }
+
     }
 
     public static revive(panel: vscode.WebviewPanel, extensionPath: string) {
@@ -132,6 +263,7 @@ class MarkupPanel {
         panel: vscode.WebviewPanel,
         extensionPath: string
     ) {
+
         this._panel = panel;
         this._extensionPath = extensionPath;
 
@@ -143,19 +275,26 @@ class MarkupPanel {
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
         // Update the content based on view changes
-        this._panel.onDidChangeViewState(e => {
-            if (this._panel.visible) {
-                this._update()
-            }
-        }, null, this._disposables);
+        // this._panel.onDidChangeViewState(e => {
+        //     //  NOTE: This resets all state, which ain't great.
+        //     // if (this._panel.visible) {
+        //     //     this._update()
+        //     // }
+        // }, null, this._disposables);
 
         // Handle messages from the webview
         this._panel.webview.onDidReceiveMessage(message => {
-            switch (message.command) {
-                case 'alert':
-                    vscode.window.showErrorMessage(message.text);
-                    return;
-            }
+
+
+            // switch (message.command) {
+            //     case 'highlight':
+            //         // vscode.window.showErrorMessage(message.text);
+            //         console.log("Message found")
+            //         console.log(message);
+
+
+            //         return;
+            // }
         }, null, this._disposables);
     }
 
@@ -165,10 +304,25 @@ class MarkupPanel {
         this._panel.webview.postMessage({ command: 'refactor' });
     }
 
-
-    public doChangeEditor(event) {
-
+    public sendMessage(event) {
         this._panel.webview.postMessage(event);
+    }
+
+    public highlight(errors) {
+
+        toDiagnostics(errors);
+        // collection.set(vscode.Uri.file(), [])
+        // let ranges = findRanges(errors);
+        // let decorationType = vscode.window.createTextEditorDecorationType({
+        //     border: '1px dashed rgba(255,0,0,0.7)',
+        //     borderStyle: 'none none dashed none'
+        // });
+
+        // if (vscode.window.activeTextEditor) {
+        //     vscode.window.activeTextEditor.setDecorations(decorationType, ranges);
+        // }
+
+
     }
 
 
@@ -187,31 +341,9 @@ class MarkupPanel {
     }
 
     private _update() {
-
-
         this._panel.webview.html = this._getHtmlForWebview();
-        // const z = 1 + 2;
-        // // Vary the webview's content based on where it is located in the editor.
-        // switch (this._panel.viewColumn) {
-        //     case vscode.ViewColumn.Two:
-        //         this._updateForMarkup('Compiling Markup');
-        //         return;
-
-        //     case vscode.ViewColumn.Three:
-        //         this._updateForMarkup('Testing Markup');
-        //         return;
-
-        //     case vscode.ViewColumn.One:
-        //     default:
-        //         this._updateForMarkup('Coding Markup');
-        //         return;
-        // }
     }
 
-    // private _updateForMarkup(catName: keyof typeof cats) {
-    //     this._panel.title = catName;
-    //     this._panel.webview.html = this._getHtmlForWebview(cats[catName]);
-    // }
 
     private _getHtmlForWebview() {
 
@@ -233,7 +365,7 @@ class MarkupPanel {
                 Use a content security policy to only allow loading images from https or from our extension directory,
                 and only allow scripts that have a specific nonce.
                 -->
-                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource: https:; script-src 'nonce-${nonce}';">
+                <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src vscode-resource: https:; script-src 'nonce-${nonce}'; style-src 'unsafe-inline';">
 
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <script nonce="${nonce}" src="${scriptUri}"></script>
@@ -241,8 +373,10 @@ class MarkupPanel {
             </head>
             <body>
                 <script nonce="${nonce}">
+                   
                     var app = Elm.Main.init();
                     const vscode = acquireVsCodeApi();
+                    
 
                     // const oldState = vscode.getState();
                 
