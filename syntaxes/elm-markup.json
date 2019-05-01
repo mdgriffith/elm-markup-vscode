@@ -6,7 +6,16 @@
   "scopeName": "source.elm-markup",
   "patterns": [
     {
+      "include": "#block"
+    },
+    {
+      "include": "#reference"
+    },
+    {
       "include": "#inline"
+    },
+    {
+      "include": "#inline-attributes"
     },
     {
       "include": "#italic"
@@ -27,30 +36,72 @@
       "include": "#arrow"
     },
     {
-      "include": "#block"
+      "include": "#field"
+    },
+    {
+      "include": "#list-number-icon"
     }
   ],
   "repository": {
-    "inline": {
-      "name": "meta.inline.custom",
-      "begin": "({)([^|^}]+)",
-      "beginCaptures": {
+    "reference": {
+      "match": "\\s*(\\->)\\s*(\\{[a-zA-Z0-9_-]+\\})",
+      "name": "constant.other.type-constructor.elm",
+      "captures": {
         "1": {
-          "name": "entity.name.inline.elm"
+          "name": "keyword.control.elm"
         },
         "2": {
-          "name": "entity.name.inline.elm"
+          "name": "constant.type-constructor.elm"
+        }
+      }
+    },
+    "block": {
+      "match": "^\\s*(\\|\\>?)\\s*([a-zA-Z0-9]+)\\s*(\\{[a-zA-Z0-9_-]+\\})?",
+      "name": "storage.type.elm",
+      "captures": {
+        "1": {
+          "name": "keyword.control.elm"
+        },
+        "2": {
+          "name": "constant.name.function.elm"
+        },
+        "3": {
+          "name": "storage.type.elm"
+        }
+      }
+    },
+    "inline": {
+      "match": "(\\[)([^\\]]*)(\\])",
+      "name": "inline.custom.elm",
+      "captures": {
+        "1": {
+          "name": "keyword.control.elm"
+        },
+        "2": {
+          "name": "text.elm-markup"
+        },
+        "3": {
+          "name": "keyword.control.elm"
+        }
+      }
+    },
+    "inline-attributes": {
+      "name": "meta.inline.custom",
+      "begin": "(\\{)",
+      "beginCaptures": {
+        "1": {
+          "name": "keyword.control.elm"
         }
       },
-      "end": "(})",
+      "end": "(\\})",
       "endCaptures": {
-        "0": {
-          "name": "entity.name.inline.elm"
+        "1": {
+          "name": "keyword.control.elm"
         }
       },
       "patterns": [
         {
-          "match": "([^=^|^}]+)(=)([^|^\\}]+)",
+          "match": "\\s*([^=^\\|^\\}]+)(=)([^\\|^\\}]+)\\s*",
           "name": "meta.inline.key-value",
           "captures": {
             "1": {
@@ -65,14 +116,29 @@
           }
         },
         {
-          "match": "[^|^\\}]+",
-          "name": "other.content.elm-markup"
+          "match": "\\s*([^\\|\\}]+)\\s*\\|",
+          "name": "entity.name.inline.elm"
         },
         {
-          "match": "\\|",
+          "match": "\\s*([^\\|\\}]+)\\s*",
           "name": "entity.name.inline.elm"
         }
       ]
+    },
+    "inline-token": {
+      "match": "(\\{)([a-zA-Z0-9]+)(\\})",
+      "name": "entity.name.inline.elm",
+      "captures": {
+        "1": {
+          "name": "entity.name.inline.elm"
+        },
+        "2": {
+          "name": "entity.name.inline.elm"
+        },
+        "3": {
+          "name": "entity.name.inline.elm"
+        }
+      }
     },
     "arrow": {
       "match": "(\\->)",
@@ -83,12 +149,24 @@
         }
       }
     },
+    "field": {
+      "match": "([a-zA-Z0-9]*)\\s*(\\=)",
+      "name": "meta.record.field.elm",
+      "captures": {
+        "1": {
+          "name": "entity.name.field.elm"
+        },
+        "2": {
+          "name": "keyword.control.elm"
+        }
+      }
+    },
     "list-icon": {
       "match": "^\\s+(-+)([a-z0-9]*)([^a-zA-Z0-9 \\t]*)",
       "name": "constant.other.item-number.elm",
       "captures": {
         "1": {
-          "name": "keyword.control.elm"
+          "name": "entity.control.elm"
         },
         "2": {
           "name": "entity.name.block.elm"
@@ -98,24 +176,21 @@
         }
       }
     },
+    "list-number-icon": {
+      "match": "^\\s+([\\d]+[\\.]*)",
+      "name": "constant.other.item-number.elm",
+      "captures": {
+        "1": {
+          "name": "entity.control.elm"
+        }
+      }
+    },
     "dashes": {
       "match": "(-+)",
       "name": "constant.other.dashes.elm",
       "captures": {
         "1": {
           "name": "keyword.control.elm"
-        }
-      }
-    },
-    "block": {
-      "match": "^\\s*(\\|)\\s+(.*)",
-      "name": "constant.other.type-constructor.elm",
-      "captures": {
-        "1": {
-          "name": "keyword.control.elm"
-        },
-        "2": {
-          "name": "constant.other.block.elm"
         }
       }
     },
