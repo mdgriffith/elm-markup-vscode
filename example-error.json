@@ -1,0 +1,15 @@
+{
+    "type": "error",
+    "path": "/Users/matthewgriffith/markup-for-the-statically-typed/src/Document.elm",
+    "title": "UNKNOWN IMPORT",
+    "message": [
+        "The Document module has a bad import:\n\n    ",
+        {
+            "bold": false,
+            "underline": false,
+            "color": "RED",
+            "string": "import Mark.Description"
+        },
+        "\n\nI cannot find that module! Is there a typo in the module name?\n\nThe \"source-directories\" field of your elm.json tells me to look in directories\nlike src, but it is not in any of them. Maybe it is in a package that is not\ninstalled yet?"
+    ]
+}
