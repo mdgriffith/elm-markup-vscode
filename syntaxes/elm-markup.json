@@ -40,9 +40,29 @@
     },
     {
       "include": "#list-number-icon"
+    },
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#verbatim"
     }
   ],
   "repository": {
+    "comment": {
+      "patterns": [
+        {
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.comment.mark"
+            }
+          },
+          "begin": "^\\s*!",
+          "end": "$",
+          "name": "comment.line.mark"
+        }
+      ]
+    },
     "reference": {
       "match": "\\s*(\\->)\\s*(\\{[a-zA-Z0-9_-]+\\})",
       "name": "constant.other.type-constructor.elm",
@@ -70,18 +90,22 @@
         }
       }
     },
+    "verbatim": {
+      "match": "(\\`)([^\\`]*)(\\`)",
+      "name": "string.quoted.mark"
+    },
     "inline": {
       "match": "(\\[)([^\\]]*)(\\])",
-      "name": "inline.custom.elm",
+      "name": "annotation.mark",
       "captures": {
         "1": {
-          "name": "keyword.control.elm"
+          "name": "entity.name.inline.elm"
         },
         "2": {
-          "name": "text.elm-markup"
+          "name": "string.quoted.mark"
         },
         "3": {
-          "name": "keyword.control.elm"
+          "name": "entity.name.inline.elm"
         }
       }
     },
@@ -90,22 +114,26 @@
       "begin": "(\\{)",
       "beginCaptures": {
         "1": {
-          "name": "keyword.control.elm"
+          "name": "entity.start.inline.elm"
         }
       },
       "end": "(\\})",
       "endCaptures": {
         "1": {
-          "name": "keyword.control.elm"
+          "name": "entity.end.inline.elm"
         }
       },
       "patterns": [
         {
-          "match": "\\s*([^=^\\|^\\}]+)(=)([^\\|^\\}]+)\\s*",
+          "match": "\\s*(,)\\s*",
+          "name": "punctuation.comma.elm"
+        },
+        {
+          "match": "\\s*([^=^\\|^\\}]+)(=)([^\\|^\\}|^,]+)\\s*",
           "name": "meta.inline.key-value",
           "captures": {
             "1": {
-              "name": "comment.block.elm-markup"
+              "name": "entity.name.field.mark"
             },
             "2": {
               "name": "keyword.control.elm"
@@ -116,8 +144,16 @@
           }
         },
         {
-          "match": "\\s*([^\\|\\}]+)\\s*\\|",
-          "name": "entity.name.inline.elm"
+          "match": "\\s*([^\\|\\}]+)\\s*(\\|)",
+          "name": "name.inline.mark",
+          "captures": {
+            "1": {
+              "name": "entity.name.inline.elm"
+            },
+            "2": {
+              "name": "keyword.control.elm"
+            }
+          }
         },
         {
           "match": "\\s*([^\\|\\}]+)\\s*",
