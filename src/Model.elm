@@ -67,7 +67,7 @@ editorMessageDecoder =
 
                 else if command == "Show" then
                     Decode.map RefreshDiagnostics
-                        (Decode.field "json" (Decode.list error))
+                        (Decode.field "json" (Decode.field "errors" (Decode.list error)))
 
                 else
                     Decode.succeed NoOp
@@ -102,16 +102,16 @@ type Color
 
 error =
     Decode.map3 Error
-        (Decode.field "markupFile" Decode.string)
-        (Decode.field "parserName" Decode.string)
-        (Decode.field "errors" (Decode.list issue))
+        (Decode.field "sourcePath" Decode.string)
+        (Decode.field "parser" Decode.string)
+        (Decode.field "problems" (Decode.list issue))
 
 
 issue =
     Decode.map3 Issue
-        (Decode.field "name" Decode.string)
-        (Decode.field "focus" focus)
-        (Decode.field "text" (Decode.list text))
+        (Decode.field "title" Decode.string)
+        (Decode.field "region" focus)
+        (Decode.field "message" (Decode.list text))
 
 
 text =
@@ -121,24 +121,26 @@ text =
 
 
 maybeColor =
-    Decode.string
+    Decode.nullable Decode.string
         |> Decode.andThen
-            (\val ->
-                case val of
-                    "yellow" ->
-                        Decode.succeed (Just Yellow)
-
-                    "red" ->
-                        Decode.succeed (Just Red)
-
-                    "cyan" ->
-                        Decode.succeed (Just Cyan)
-
-                    "" ->
+            (\maybe ->
+                case maybe of
+                    Nothing ->
                         Decode.succeed Nothing
 
-                    _ ->
-                        Decode.fail ("Unknown Color: " ++ val)
+                    Just clr ->
+                        case clr of
+                            "yellow" ->
+                                Decode.succeed (Just Yellow)
+
+                            "red" ->
+                                Decode.succeed (Just Red)
+
+                            "cyan" ->
+                                Decode.succeed (Just Cyan)
+
+                            _ ->
+                                Decode.fail ("Unknown Color: " ++ clr)
             )
 
 
@@ -174,8 +176,9 @@ focus =
 
 rowColPos =
     Decode.map2 Position
-        (Decode.field "row" Decode.int)
-        (Decode.field "col" Decode.int)
+        -- offset is also present
+        (Decode.field "line" Decode.int)
+        (Decode.field "column" Decode.int)
 
 
 type alias Model =

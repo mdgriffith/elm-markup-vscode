@@ -222,10 +222,6 @@ viewIssue iss =
         [ Html.div [ Html.Attributes.style "color" "cyan" ]
             [ Html.text (fillToEighty ("-- " ++ String.toUpper iss.name ++ " ")) ]
         , Html.div []
-            [ Html.text "row"
-            , Html.text (String.fromInt iss.focus.start.col)
-            ]
-        , Html.div []
             (List.map viewText iss.text)
         ]
 

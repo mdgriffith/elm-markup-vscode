@@ -6,7 +6,7 @@ let spawn = require('cross-spawn');
 //  { cwd: elmPackageJsonPath,
 //    env: process.env,
 //  }
-export function executeExpectJson(scriptPath, args, opts) {
+export function executeExpectJson(scriptPath, args, opts): Promise<{ errors: any }> {
     return new Promise(function (resolve, reject) {
         function finish() {
 

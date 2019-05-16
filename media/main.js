@@ -4871,8 +4871,8 @@ var elm$json$Json$Decode$map2 = _Json_map2;
 var author$project$Model$rowColPos = A3(
 	elm$json$Json$Decode$map2,
 	author$project$Model$Position,
-	A2(elm$json$Json$Decode$field, 'row', elm$json$Json$Decode$int),
-	A2(elm$json$Json$Decode$field, 'col', elm$json$Json$Decode$int));
+	A2(elm$json$Json$Decode$field, 'line', elm$json$Json$Decode$int),
+	A2(elm$json$Json$Decode$field, 'column', elm$json$Json$Decode$int));
 var author$project$Model$focus = A3(
 	elm$json$Json$Decode$map2,
 	author$project$Model$Range,
@@ -4887,28 +4887,42 @@ var author$project$Model$Red = {$: 'Red'};
 var author$project$Model$Yellow = {$: 'Yellow'};
 var elm$json$Json$Decode$andThen = _Json_andThen;
 var elm$json$Json$Decode$fail = _Json_fail;
+var elm$json$Json$Decode$map = _Json_map1;
+var elm$json$Json$Decode$null = _Json_decodeNull;
+var elm$json$Json$Decode$oneOf = _Json_oneOf;
+var elm$json$Json$Decode$nullable = function (decoder) {
+	return elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				elm$json$Json$Decode$null(elm$core$Maybe$Nothing),
+				A2(elm$json$Json$Decode$map, elm$core$Maybe$Just, decoder)
+			]));
+};
 var elm$json$Json$Decode$string = _Json_decodeString;
 var elm$json$Json$Decode$succeed = _Json_succeed;
 var author$project$Model$maybeColor = A2(
 	elm$json$Json$Decode$andThen,
-	function (val) {
-		switch (val) {
-			case 'yellow':
-				return elm$json$Json$Decode$succeed(
-					elm$core$Maybe$Just(author$project$Model$Yellow));
-			case 'red':
-				return elm$json$Json$Decode$succeed(
-					elm$core$Maybe$Just(author$project$Model$Red));
-			case 'cyan':
-				return elm$json$Json$Decode$succeed(
-					elm$core$Maybe$Just(author$project$Model$Cyan));
-			case '':
-				return elm$json$Json$Decode$succeed(elm$core$Maybe$Nothing);
-			default:
-				return elm$json$Json$Decode$fail('Unknown Color: ' + val);
+	function (maybe) {
+		if (maybe.$ === 'Nothing') {
+			return elm$json$Json$Decode$succeed(elm$core$Maybe$Nothing);
+		} else {
+			var clr = maybe.a;
+			switch (clr) {
+				case 'yellow':
+					return elm$json$Json$Decode$succeed(
+						elm$core$Maybe$Just(author$project$Model$Yellow));
+				case 'red':
+					return elm$json$Json$Decode$succeed(
+						elm$core$Maybe$Just(author$project$Model$Red));
+				case 'cyan':
+					return elm$json$Json$Decode$succeed(
+						elm$core$Maybe$Just(author$project$Model$Cyan));
+				default:
+					return elm$json$Json$Decode$fail('Unknown Color: ' + clr);
+			}
 		}
 	},
-	elm$json$Json$Decode$string);
+	elm$json$Json$Decode$nullable(elm$json$Json$Decode$string));
 var author$project$Model$text = A3(
 	elm$json$Json$Decode$map2,
 	author$project$Model$Text,
@@ -4919,20 +4933,20 @@ var elm$json$Json$Decode$map3 = _Json_map3;
 var author$project$Model$issue = A4(
 	elm$json$Json$Decode$map3,
 	author$project$Model$Issue,
-	A2(elm$json$Json$Decode$field, 'name', elm$json$Json$Decode$string),
-	A2(elm$json$Json$Decode$field, 'focus', author$project$Model$focus),
+	A2(elm$json$Json$Decode$field, 'title', elm$json$Json$Decode$string),
+	A2(elm$json$Json$Decode$field, 'region', author$project$Model$focus),
 	A2(
 		elm$json$Json$Decode$field,
-		'text',
+		'message',
 		elm$json$Json$Decode$list(author$project$Model$text)));
 var author$project$Model$error = A4(
 	elm$json$Json$Decode$map3,
 	author$project$Model$Error,
-	A2(elm$json$Json$Decode$field, 'markupFile', elm$json$Json$Decode$string),
-	A2(elm$json$Json$Decode$field, 'parserName', elm$json$Json$Decode$string),
+	A2(elm$json$Json$Decode$field, 'sourcePath', elm$json$Json$Decode$string),
+	A2(elm$json$Json$Decode$field, 'parser', elm$json$Json$Decode$string),
 	A2(
 		elm$json$Json$Decode$field,
-		'errors',
+		'problems',
 		elm$json$Json$Decode$list(author$project$Model$issue)));
 var author$project$Model$position = A3(
 	elm$json$Json$Decode$map2,
@@ -4953,7 +4967,6 @@ var author$project$Model$selection = A3(
 	author$project$Model$Selection,
 	A2(elm$json$Json$Decode$field, 'anchor', author$project$Model$position),
 	A2(elm$json$Json$Decode$field, 'active', author$project$Model$position));
-var elm$json$Json$Decode$map = _Json_map1;
 var author$project$Model$editorMessageDecoder = A2(
 	elm$json$Json$Decode$andThen,
 	function (command) {
@@ -5003,7 +5016,10 @@ var author$project$Model$editorMessageDecoder = A2(
 			A2(
 				elm$json$Json$Decode$field,
 				'json',
-				elm$json$Json$Decode$list(author$project$Model$error))) : elm$json$Json$Decode$succeed(author$project$Model$NoOp)))));
+				A2(
+					elm$json$Json$Decode$field,
+					'errors',
+					elm$json$Json$Decode$list(author$project$Model$error)))) : elm$json$Json$Decode$succeed(author$project$Model$NoOp)))));
 	},
 	A2(elm$json$Json$Decode$field, 'command', elm$json$Json$Decode$string));
 var elm$core$Debug$log = _Debug_log;
@@ -5286,15 +5302,6 @@ var author$project$Main$viewIssue = function (iss) {
 						elm$html$Html$text(
 						author$project$Main$fillToEighty(
 							'-- ' + (elm$core$String$toUpper(iss.name) + ' ')))
-					])),
-				A2(
-				elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						elm$html$Html$text('row'),
-						elm$html$Html$text(
-						elm$core$String$fromInt(iss.focus.start.col))
 					])),
 				A2(
 				elm$html$Html$div,
